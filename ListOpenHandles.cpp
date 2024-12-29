@@ -313,7 +313,7 @@ bool compareProcessName(std::string justProcName, const char* fullPathProc)
     const char* pName = strrchr(fullPathProc, '\\');
     pName = (pName != NULL) ? pName+1 : fullPathProc;
 
-    return (strnicmp(justProcName.c_str(),  pName, justProcName.length()) == 0);
+    return (_strnicmp(justProcName.c_str(),  pName, justProcName.length()) == 0);
 }
 
 
@@ -324,15 +324,17 @@ int ListOpenHandles::ReportOpenFiles(ostream& outp)
     bool showHeaders = true;
     int  result = 0;
 
-    for (int repIdx = 0; repIdx < m_repeat; repIdx++)
+    for (size_t repIdx = 0; repIdx < m_repeat; repIdx++)
     {
         if (repIdx != 0)
             Sleep((DWORD)(m_waitMin * 60 * 1000));
 
         time_t now;
+        struct tm tm;
         time(&now);
         char buf[512];
-        strftime(buf, sizeof(buf), "%x, %X, ", localtime(&now));
+        localtime_s(&tm, &now);
+        strftime(buf, sizeof(buf), "%x, %X, ", &tm);
 
         showHeaders = ((repIdx % 30) == 0);
         result = ReportOpenFiles(outp, showHeaders, buf);
@@ -460,7 +462,7 @@ int ListOpenHandles::ReportOpenFiles(ostream& outp, bool showHeaders, const char
         return -2;
     }
 
-    while ((status = NtQuerySystemInformation(SystemHandleInformation, pSysHandleListInfo, pSysHandleListInfo.Size(), &retSize)) == 
+    while ((status = NtQuerySystemInformation(SystemHandleInformation, pSysHandleListInfo, (ULONG)pSysHandleListInfo.Size(), &retSize)) == 
         STATUS_INFO_LENGTH_MISMATCH)
     {
         pSysHandleListInfo.Resize(pSysHandleListInfo.Size() + sizeof(SYSTEM_HANDLE_INFORMATION) * 500);
@@ -514,7 +516,7 @@ int ListOpenHandles::ReportOpenFiles(ostream& outp, bool showHeaders, const char
     // EnumProcesses(...)
 
     ScopePtr<SYSTEM_PROCESS_INFORMATION> pSysProcList(sizeof(SYSTEM_PROCESS_INFORMATION) * 100);
-    while ((status = NtQuerySystemInformation(SystemProcessInformation, pSysProcList, pSysProcList.Size(), &retSize)) 
+    while ((status = NtQuerySystemInformation(SystemProcessInformation, pSysProcList, (ULONG)pSysProcList.Size(), &retSize))
         == STATUS_INFO_LENGTH_MISMATCH)
     {
         pSysProcList.Resize(retSize);
@@ -560,7 +562,7 @@ int ListOpenHandles::ReportOpenFiles(ostream& outp, bool showHeaders, const char
             //      ProcessImageFileName    = 27;
             const PROCESSINFOCLASS ProcessImageFileName = (PROCESSINFOCLASS)27;
             ULONG procRetSize;
-            status = NtQueryInformationProcessW(processHandle, ProcessImageFileName, pProcInfo, pProcInfo.Size(), &procRetSize);
+            status = NtQueryInformationProcessW(processHandle, ProcessImageFileName, pProcInfo, (ULONG)pProcInfo.Size(), &procRetSize);
             if (status == 0 || status == STATUS_INFO_LENGTH_MISMATCH )
             {
                 char* procName = WideToCptr(pProcInfo->Buffer, pProcInfo->Length);
@@ -576,7 +578,7 @@ int ListOpenHandles::ReportOpenFiles(ostream& outp, bool showHeaders, const char
 
             if (m_showProcInfo)
                 outp << "----\n"
-                    << "Pid: "  << (unsigned)pSysProcInfo->UniqueProcessId
+                    << "Pid: "  << (size_t)pSysProcInfo->UniqueProcessId
                     << ", Handles:"  << pSysProcInfo->HandleCount
                     << ", PeakPageUsage: " << pSysProcInfo->PeakPagefileUsage
                     << ", PrivatePageCnt: " << pSysProcInfo->PrivatePageCount
@@ -660,7 +662,7 @@ int ListOpenHandles::ReportOpenFiles(ostream& outp, bool showHeaders, const char
                     continue;
                 }
 
-                status = NtQueryObjectW(dupHnd, ObjectBasicInformation, pObjBasic, pObjBasic.Size(), &retSize);
+                status = NtQueryObjectW(dupHnd, ObjectBasicInformation, pObjBasic, (ULONG) pObjBasic.Size(), &retSize);
                 if (status == 0 && m_showAll)
                 {
                     if (pObjBasic->Attributes != 0)
@@ -668,11 +670,11 @@ int ListOpenHandles::ReportOpenFiles(ostream& outp, bool showHeaders, const char
                 }
 
                 // ----- Get Type information.
-                status = NtQueryObjectW(dupHnd, ObjectTypeInformation, pObjType, pObjType.Size(), &retSize);
+                status = NtQueryObjectW(dupHnd, ObjectTypeInformation, pObjType, (ULONG)pObjType.Size(), &retSize);
                 if (status == STATUS_INFO_LENGTH_MISMATCH) 
                 {
                     pObjType.Resize(retSize);
-                    status = NtQueryObjectW(dupHnd, ObjectTypeInformation, pObjType, pObjType.Size(), &retSize);
+                    status = NtQueryObjectW(dupHnd, ObjectTypeInformation, pObjType, (ULONG)pObjType.Size(), &retSize);
                 }
                 if (status == 0)
                     objTypeStr = WideToCptr(pObjType->TypeName.Buffer, pObjType->TypeName.Length);
@@ -680,11 +682,11 @@ int ListOpenHandles::ReportOpenFiles(ostream& outp, bool showHeaders, const char
                 // ----- Get handle description details
                 std::string objDesc;
 
-                status = NtQueryObjectW(dupHnd, (OBJECT_INFORMATION_CLASS)1, pObjName, pObjName.Size(), &retSize);
+                status = NtQueryObjectW(dupHnd, (OBJECT_INFORMATION_CLASS)1, pObjName, (ULONG)pObjName.Size(), &retSize);
                 if (status == STATUS_INFO_LENGTH_MISMATCH)
                 {
                     pObjName.Resize(retSize);
-                    status = NtQueryObjectW(dupHnd, (OBJECT_INFORMATION_CLASS)1, pObjName, pObjName.Size(), &retSize);
+                    status = NtQueryObjectW(dupHnd, (OBJECT_INFORMATION_CLASS)1, pObjName, (ULONG)pObjName.Size(), &retSize);
                 }
 
                 if (status == 0 && m_showAll)
@@ -696,7 +698,7 @@ int ListOpenHandles::ReportOpenFiles(ostream& outp, bool showHeaders, const char
                     IO_STATUS_BLOCK statusBlock;
                     // ZeroMemory(&statusBlock, sizeof(statusBlock));
 
-                    NTSTATUS status = NtQueryInformationFileW(dupHnd, &statusBlock, pFileInformation, pFileInformation.Size(), FileNameInformation);
+                    NTSTATUS status = NtQueryInformationFileW(dupHnd, &statusBlock, pFileInformation, (ULONG)pFileInformation.Size(), FileNameInformation);
                     if (status == STATUS_SUCCESS && m_showFiles)
                     {
                         objDesc = WideToCptr(pFileInformation->FileName, pFileInformation->FileNameLength);
@@ -789,6 +791,7 @@ int ListOpenHandles::ReportOpenFiles(ostream& outp, bool showHeaders, const char
         if (processHandle > 0)
             CloseHandle(processHandle);
     }
+    return 0;
 }
 
 #if 0

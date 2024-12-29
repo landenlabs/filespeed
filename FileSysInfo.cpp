@@ -3,6 +3,8 @@
 // Author:  DLang   2009 
 //-----------------------------------------------------------------------------
 
+#define _CRT_SECURE_NO_WARNINGS 1
+
 #include "FileSysInfo.h"
 #include <windows.h>
 

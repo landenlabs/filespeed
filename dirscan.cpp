@@ -219,7 +219,7 @@ void DirectoryScan::Init(const char* pFromFiles, const char* pCwd, bool appendSt
     m_pFiles      = NULL; 
 
     // Make local copy of input pattern
-    int strLen = strlen(pFromFiles) + 3;
+    size_t strLen = strlen(pFromFiles) + 3;
     char* pDupFromFiles = (char*)malloc(strLen);
     strcpy_s(pDupFromFiles, strLen, pFromFiles);
     m_tmpPtr      = pDupFromFiles;
@@ -238,7 +238,7 @@ void DirectoryScan::Init(const char* pFromFiles, const char* pCwd, bool appendSt
     }
 
     // Pull input pattern apart at directory levels.
-    int posWild   = strcspn(pDupFromFiles, "*?");
+    size_t posWild = strcspn(pDupFromFiles, "*?");
     char* pBegDir = pDupFromFiles;
     char* pEndDir;
 

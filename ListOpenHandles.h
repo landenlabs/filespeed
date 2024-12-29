@@ -28,7 +28,7 @@ public:
     int ReportOpenFiles(std::ostream& out, bool showHeaders, const char* prefix);
 
     double      m_waitMin;          // -w <minutes>
-    int         m_repeat;           // -r <num>
+    size_t      m_repeat;           // -r <num>
     std::string m_process;          // -p <process>
     unsigned    m_processId;        // -p <process>
     std::string m_filename;         // -i <filename>

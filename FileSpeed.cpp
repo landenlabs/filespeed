@@ -3,6 +3,7 @@
 // Author:  DLang   2009  v2.7
 //-----------------------------------------------------------------------------
 
+#define  _CRT_SECURE_NO_WARNINGS
 
 #include <windows.h>
 
@@ -298,15 +299,15 @@ int MeasureFileRead(int nArg, const char* pArg[], Options& options)
     double sampleOpenSeconds = 0;
     double sampleMaxOpenSeconds = 0;
 
-    DWORD sampleStartTick;
-    DWORD startTick = sampleStartTick = GetTickCount();
-    DWORD endTick = (options.maxSeconds == 0) ? -1 : (startTick + options.maxSeconds * 1000);
+    size_t sampleStartTick;
+    size_t startTick = sampleStartTick = GetTickCount();
+    size_t endTick = (options.maxSeconds == 0) ? -1 : (startTick + options.maxSeconds * 1000);
     size_t lastSeconds = options.reportSeconds;
 
     char lbuffer[MAX_PATH];
     while (fgets(lbuffer, sizeof(lbuffer), inFILE) != NULL && GetTickCount() < endTick)
     {
-        int len = strlen(lbuffer);
+        size_t len = strlen(lbuffer);
         lbuffer[len-1] = '\0';       // remove newline
 
         DWORD fileFlag = FILE_ATTRIBUTE_READONLY;
@@ -357,12 +358,12 @@ int MeasureFileRead(int nArg, const char* pArg[], Options& options)
             // For unbuffered I/O buffer must be on sector boundary
             char* buffer = (char*)(ULONG_PTR(sBuffer + bytesPerSector-1) & ~ULONG_PTR(bytesPerSector-1));
 
-            DWORD recSize = (options.recSize != 0) ? options.recSize : sMaxRecSize;
+            DWORD recSize = (options.recSize != 0) ? (DWORD)options.recSize : sMaxRecSize;
             recSize = (recSize <= sMaxRecSize) ? recSize : sMaxRecSize;
 
             DWORD bytesRead = 0;
             if (options.maxReadMB > 0 && recSize > MB * options.maxReadMB)
-                recSize = DWORD(MB * options.maxReadMB);
+                recSize = size_t(MB * (DWORD)options.maxReadMB);
 
             if (options.accessPieces > 1)
             {
@@ -377,7 +378,7 @@ int MeasureFileRead(int nArg, const char* pArg[], Options& options)
                 LARGE_INTEGER rdFileSeek;
                 rdFileSeek.QuadPart = rdFileSize.QuadPart / options.accessPieces;
 
-                DWORD rdRecSize = recSize / options.accessPieces;
+                DWORD rdRecSize = recSize / (DWORD)options.accessPieces;
                 if (recSize < 16)
                     rdRecSize = 16;
 
@@ -616,7 +617,7 @@ int main(int argc, const char* argv[])
                 break;
 
               case 'o':     // output filename (DirList command)
-                if (stricmp(optarg, "null") == 0)
+                if (_stricmp(optarg, "null") == 0)
                     options.outFILE = NULL;
                 else
                 {
